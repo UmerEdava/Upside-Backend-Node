@@ -1,0 +1,18 @@
+import { Joi, celebrate } from 'celebrate';
+
+export default {
+    login: celebrate({
+        body: Joi.object({
+            username: Joi.string().min(2).max(30).required(),
+            password: Joi.string().min(4).max(40).required()
+        })
+    }),
+    signup: celebrate({
+        body: Joi.object({
+            name: Joi.string().min(3).max(22).required(),
+            username: Joi.string().min(2).max(30).required(),
+            email: Joi.string().email().required(),
+            password: Joi.string().min(8).max(40).required()
+        })
+    })
+}
