@@ -23,7 +23,7 @@ export default {
     }),
     getAllOtherUserPosts: celebrate({
         params: {
-            id: Joi.objectId().required()
+            idOrUsername: Joi.string().required()
         }
     }),
     getPost: celebrate({
@@ -34,14 +34,24 @@ export default {
     likePost: celebrate({
         body: Joi.object({
             postId: Joi.objectId().required(),
-            userId: Joi.objectId().required()
         })
     }),
     commentPost: celebrate({
         body: Joi.object({
             postId: Joi.objectId().required(),
-            userId: Joi.objectId().required(),
             text: Joi.string().max(500).required(),
         })
-    })
+    }),
+    deleteComment: celebrate({
+        query: {
+            postId: Joi.objectId().required(),
+            commentId: Joi.objectId().required(),
+        }
+    }),
+    likeComment: celebrate({
+        body: Joi.object({
+            postId: Joi.objectId().required(),
+            commentId: Joi.objectId().required(),
+        })
+    }),
 }

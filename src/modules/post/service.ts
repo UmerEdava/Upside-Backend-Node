@@ -1,32 +1,35 @@
 import * as constants from '../../utils/constants/index';
-import UserModel from "./model";
 import * as types from '../../utils/types/types';
 import { DBService } from '../../utils/dbService/dbService';
+import postModel from './model';
 const DB = new DBService();
 
 export default {
     createPost: async (postData: types.CREATE_POST, opts: any) => {
+        console.log('beofre insert', postData);
         const post = await DB.insertOne(constants.COLLECTIONS.POST_COLLECTION, {
             postedBy: postData.postedBy,
             text: postData.text,
             img: postData.img
         }, opts);
         delete post.createdAt;
-        delete post.updatedAt;
         delete post.__v;
         return DB.normalizeObject(post);
     },
     getPostById: async (id: string) => {
-        return await DB.getById(constants.COLLECTIONS.POST_COLLECTION, id, {});
+        return await postModel.findOne({ _id: id }).populate('postedBy');
     },
-    getPost: async ({query}: {query: any}) => {
-        return await DB.getOneByQuery(constants.COLLECTIONS.POST_COLLECTION, query, {});
+    getPost: async ({query, opts}: {query: any, opts: any}) => {
+        return await DB.getOneByQuery(constants.COLLECTIONS.POST_COLLECTION, query, opts || {});
     },
-    getAllPosts: async ({query}: any) => {
-        return await DB.getByQuery(constants.COLLECTIONS.POST_COLLECTION, query, {});
+    getAllPosts: async ({query, opts}: any) => {
+        return await DB.getByQuery(constants.COLLECTIONS.POST_COLLECTION, query, opts || {});
     },
-    updatePost: async ({query, updateDoc, opts}: {query: any, updateDoc: any, opts: any}) => {
+    updatePostByDoc: async ({query, updateDoc, opts}: {query: any, updateDoc: any, opts: any}) => {
         return await DB.updateOne(constants.COLLECTIONS.POST_COLLECTION, query, {$set: updateDoc}, opts);
+    },
+    updatePostByQuery: async ({query, updateQuery, opts}: {query: any, updateQuery: any, opts: any}) => {
+        return await DB.updateOne(constants.COLLECTIONS.POST_COLLECTION, query, updateQuery, opts);
     },
     deletePost: async (id: string) => {
         return await DB.deleteById(constants.COLLECTIONS.POST_COLLECTION, id);

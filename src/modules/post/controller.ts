@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import httpStatus from "http-status";
+import { v2 as cloudinary } from "cloudinary";
 
 import { ApiError } from "../../middlewares/errorHandler/ApiError";
 import { JWT } from "../../utils/jwt/jwt";
@@ -8,269 +9,566 @@ import { Bcrypt } from "../../utils/bcrypt/Bcrypt";
 import { postModelTypes } from "./model";
 
 import * as types from "../../utils/types/types";
-import UserService from '../user/service';
-import Service from './service'
+import UserService from "../user/service";
+import Service from "./service";
 import { userModelTypes } from "../auth/model";
+import { isMongoId } from "../../utils/common_functions/common_functions";
 
 export default {
-    createPostController: async (req: Request, res: Response, next: NextFunction) => {
-        try {
-            const { text, img } = req.body;
+  createPostController: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { text } = req.body;
 
-            if (!text && !img) {
-                return next(new ApiError(httpStatus.BAD_REQUEST, 'Please provide text or image'));
-            }
+      let { img } = req.body;
 
-            const newPost = await Service.createPost({
-                postedBy: req.userId as string,
-                text,
-                img
-            },{})
+      if (!text && !img) {
+        return next(
+          new ApiError(httpStatus.BAD_REQUEST, "Please provide text or image")
+        );
+      }
 
-            return res.json({
-                status: true,
-                message: 'Post added successfully',
-                data: newPost
-            })
+      if (img) {
+        const uploadedResponse = await cloudinary.uploader.upload(img);
+        img = uploadedResponse.secure_url;
+      }
+
+      const newPost = await Service.createPost(
+        {
+          postedBy: req.userId as string,
+          text,
+          img,
+        },
+        { 
         }
-        catch (err) {
-            console.log("🚀 ~ createPostController: ~ err:", err)
-            log.debug("Error while creating post");
-            log.error(err);
-            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
+      );
+
+      // fetch post details with populate postedBy
+      const postDetails = await Service.getPostById(newPost._id);
+
+      return res.json({
+        status: true,
+        message: "Post added successfully",
+        data: postDetails,
+      });
+    } catch (err) {
+      console.log("🚀 ~ createPostController: ~ err:", err);
+      log.debug("Error while creating post");
+      log.error(err);
+      return next(
+        new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error")
+      );
+    }
+  },
+  updatePostController: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { _id, text } = req.body;
+      let { img } = req.body;
+
+      const postDetails = (await Service.getPostById(_id)) as postModelTypes;
+
+      if (!postDetails) {
+        return next(new ApiError(httpStatus.BAD_REQUEST, "Post not found."));
+      }
+
+      postDetails.text = text || postDetails.text;
+
+      if (img) {
+        const uploadedResponse = await cloudinary.uploader.upload(img);
+        img = uploadedResponse.secure_url;
+      } else {
+        img = postDetails.img;
+      }
+
+      const updatedUser = await Service.updatePostByDoc({
+        query: { _id },
+        updateDoc: postDetails,
+        opts: { new: true },
+      });
+
+      return res.json({
+        status: true,
+        message: "Post edited successfully",
+        data: postDetails,
+      });
+    } catch (err) {
+      log.debug("Error while editing post");
+      log.error(err);
+      return next(
+        new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error")
+      );
+    }
+  },
+  deletePostController: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params;
+
+      const postDetails = (await Service.getPostById(id)) as postModelTypes;
+
+      if (!postDetails) {
+        return next(new ApiError(httpStatus.BAD_REQUEST, "Post not found."));
+      }
+
+      const deletedPost = await Service.updatePostByDoc({
+        query: { _id: id },
+        updateDoc: { isDeleted: true },
+        opts: { new: true },
+      });
+
+      return res.json({
+        status: true,
+        message: "Post deleted successfully",
+        data: {},
+      });
+    } catch (err) {
+      log.debug("Error while deleting post");
+      log.error(err);
+      return next(
+        new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error")
+      );
+    }
+  },
+  getCurrentUserPostsController: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const posts = (await Service.getAllPosts({
+        query: { postedBy: req.userId },
+      })) as postModelTypes[];
+
+      return res.json({
+        status: true,
+        message: "Posts fetched successfully",
+        data: {
+          posts,
+        },
+      });
+    } catch (err) {
+      log.debug("Error while fetching posts");
+      log.error(err);
+      return next(
+        new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error")
+      );
+    }
+  },
+  getAllPostsController: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { idOrUsername } = req.params;
+
+      const mongoId = isMongoId(idOrUsername);
+
+      let userId = idOrUsername;
+      if (!mongoId) {
+        const user = (await UserService.getUser({
+          query: { username: idOrUsername },
+        })) as userModelTypes;
+        if (!user) {
+          return next(new ApiError(httpStatus.BAD_REQUEST, "User not found"));
         }
-    },
-    updatePostController: async (req: Request, res: Response, next: NextFunction) => {
-        try {
-            const { _id, text, img } = req.body;
+        userId = user._id;
+      }
 
-            const postDetails = await Service.getPostById(_id) as postModelTypes
+      const posts = (await Service.getAllPosts({
+        query: { $and: [{ postedBy: userId }, { isDeleted: false }] },
+        opts: {
+          populateQuery: {
+            path: "postedBy",
+            select: ["_id", "name", "username", "profilePic"],
+          },
+          sortOption: { createdAt: -1 },
+        },
+      })) as postModelTypes[];
 
-            if (!postDetails) {
-                return next(new ApiError(httpStatus.BAD_REQUEST, 'Post not found.'));
-            }
+      return res.json({
+        status: true,
+        message: "Posts fetched successfully",
+        data: {
+          posts,
+        },
+      });
+    } catch (err) {
+      log.debug("Error while fetching posts");
+      log.error(err);
+      return next(
+        new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error")
+      );
+    }
+  },
+  getPostController: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params;
 
-            postDetails.text = text || postDetails.text
-            postDetails.img = img || postDetails.img
+      const post = (await Service.getPost({
+        query: {
+          _id: id,
+          isDeleted: false,
+        },
+        opts: {
+          populateQuery: [
+            {
+              path: "postedBy",
+              select: ["_id", "name", "username", "profilePic"],
+            },
+            {
+              path: "comments",
+              select: ["_id", "text", "userId"],
+              populate: {
+                path: "userId",
+                select: ["_id", "name", "username", "profilePic"],
+              },
+            },
+          ],
+        },
+      })) as postModelTypes;
 
-            const updatedUser = await Service.updatePost({
-                query: { _id },
-                updateDoc: postDetails,
-                opts: { new: true }
-            })
+      if (!post) {
+        return next(new ApiError(httpStatus.BAD_REQUEST, "Post not found."));
+      }
 
+      // Add latest on top sorting in comments
+      post.comments = post.comments.sort((a: any, b: any) => {
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      });
+      console.log("🚀 ~ post.comments=post.comments.sort ~ post.comments:", post.comments)
 
-            return res.json({
-                status: true,
-                message: 'Post edited successfully',
-                data: postDetails
-            })
-        }
-        catch (err) {
-            log.debug("Error while editing post");
-            log.error(err);
-            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
-        }
-    },
-    deletePostController: async (req: Request, res: Response, next: NextFunction) => {
-        try {
-            const { id } = req.params;
+      // Filter out deleted comments
+      post.comments = post.comments.filter(
+        (comment: any) => comment.isDeleted === false || !comment.isDeleted 
+      );
 
-            const postDetails = await Service.getPostById(id) as postModelTypes
+      return res.json({
+        status: true,
+        message: "Post fetched successfully",
+        data: {
+          post,
+        },
+      });
+    } catch (err) {
+      log.debug("Error while fetching post");
+      log.error(err);
+      return next(
+        new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error")
+      );
+    }
+  },
+  likeUnlikePostController: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { postId } = req.body;
+      const userId = req.userId;
 
-            if (!postDetails) {
-                return next(new ApiError(httpStatus.BAD_REQUEST, 'Post not found.'));
-            }
+      const postDetails = (await Service.getPostById(postId)) as postModelTypes;
 
-            const deletedPost = await Service.updatePost({
-                query: { _id: id },
-                updateDoc: { isDeleted: true },
-                opts: { new: true }
-            })
+      if (!postDetails) {
+        return next(new ApiError(httpStatus.BAD_REQUEST, "Post not found."));
+      }
 
-            return res.json({
-                status: true,
-                message: 'Post deleted successfully',
-                data: {}
-            })
-        }
-        catch (err) {
-            log.debug("Error while deleting post");
-            log.error(err);
-            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
-        }
-    },
-    getCurrentUserPostsController: async (req: Request, res: Response, next: NextFunction) => {
-        try {
+      const isLiked = postDetails.likes.some(
+        (like: any) => like + "" === userId + ""
+      );
 
-            const posts = await Service.getAllPosts({ query: { postedBy: req.userId } }) as postModelTypes[]
+      if (isLiked) {
+        // unlike
+        postDetails.likes = postDetails.likes.filter(
+          (like: any) => like + "" !== userId + ""
+        );
+        const updatedPost = await Service.updatePostByDoc({
+          query: { _id: postId },
+          updateDoc: { likes: postDetails.likes },
+          opts: { new: true },
+        });
 
-            return res.json({
-                status: true,
-                message: 'Posts fetched successfully',
-                data: {
-                    posts
-                }
-            })
-        }
-        catch (err) {
-            log.debug("Error while fetching posts");
-            log.error(err);
-            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
-        }
-    },
-    getAllPostsController: async (req: Request, res: Response, next: NextFunction) => {
-        try {
+        return res.json({
+          status: true,
+          message: "Unliked successfully",
+          data: updatedPost,
+        });
+      } else {
+        // like
+        console.log("🚀 ~ likeUnlikePostController: ~ userId:", userId);
+        postDetails.likes.push(userId as string);
+        const updatedPost = await Service.updatePostByDoc({
+          query: { _id: postId },
+          updateDoc: { likes: postDetails.likes },
+          opts: { new: true },
+        });
+        console.log(
+          "🚀 ~ likeUnlikePostController: ~ updatedPost:",
+          updatedPost
+        );
 
-            const { userId } = req.params
+        return res.json({
+          status: true,
+          message: "Liked successfully",
+          data: updatedPost,
+        });
+      }
+    } catch (err) {
+      log.debug("Error while editing post");
+      log.error(err);
+      return next(
+        new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error")
+      );
+    }
+  },
+  commentPostController: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { postId, text } = req.body;
 
-            const posts = await Service.getAllPosts({ query: { postedBy: userId, isDeleted: false } }) as postModelTypes[]
+      const userId = req.userId;
 
-            return res.json({
-                status: true,
-                message: 'Posts fetched successfully',
-                data: {
-                    posts
-                }
-            })
-        }
-        catch (err) {
-            log.debug("Error while fetching posts");
-            log.error(err);
-            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
-        }
-    },
-    getPostController: async (req: Request, res: Response, next: NextFunction) => {
-        try {
+      const postDetails = (await Service.getPostById(postId)) as postModelTypes;
 
-            const { id } = req.params
+      if (!postDetails) {
+        return next(new ApiError(httpStatus.BAD_REQUEST, "Post not found."));
+      }
 
-            const post = await Service.getPost({query: {
-                _id: id,
-                isDeleted: false
-            }}) as postModelTypes
+      const newComment = {
+        userId,
+        text,
+      };
 
-            if (!post) {
-                return next(new ApiError(httpStatus.BAD_REQUEST, 'Post not found.'));
-            }
+      const comments = [...postDetails.comments, newComment];
 
-            return res.json({
-                status: true,
-                message: 'Post fetched successfully',
-                data: {
-                    post
-                }
-            })
-        }
-        catch (err) {
-            log.debug("Error while fetching post");
-            log.error(err);
-            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
-        }
-    },
-    likeUnlikePostController: async (req: Request, res: Response, next: NextFunction) => {
-        try {
-            const { postId, userId } = req.body;
+      const updatedPost = await Service.updatePostByDoc({
+        query: { _id: postId },
+        updateDoc: {
+          comments,
+        },
+        opts: { new: true },
+      });
 
-            const postDetails = await Service.getPostById(postId) as postModelTypes
+      return res.json({
+        status: true,
+        message: "Comment added successfully",
+        data: updatedPost,
+      });
+    } catch (err) {
+      log.debug("Error while editing post");
+      log.error(err);
+      return next(
+        new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error")
+      );
+    }
+  },
+  getFeedPostsController: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const followingList = req.user?.following || [];
 
-            if (!postDetails) {
-                return next(new ApiError(httpStatus.BAD_REQUEST, 'Post not found.'));
-            }
+      const feedPosts = (await Service.getAllPosts({
+        query: { postedBy: { $in: followingList }, isDeleted: false },
+        opts: {
+          populateQuery: {
+            path: "postedBy",
+            select: ["_id", "name", "username", "profilePic"],
+          },
+        },
+      })) as postModelTypes[];
 
-            const isLiked = postDetails.likes.some((like: any) => like+'' === userId+'');
+      return res.json({
+        status: true,
+        message: "Feed posts fetched successfully",
+        data: {
+          feedPosts,
+        },
+      });
+    } catch (err) {
+      log.debug("Error while fetching feed posts");
+      log.error(err);
+      return next(
+        new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error")
+      );
+    }
+  },
+  deleteCommentController: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      console.log("in delete comment controller");
+      const { postId, commentId } = req.query;
 
-            if (isLiked) {
-                // unlike
-                const updatedPost = await Service.updatePost({
-                    query: { _id: postId },
-                    updateDoc: { $pull: { likes: userId } },
-                    opts: { new: true }
-                })
+      const userId = req.userId;
 
-                return res.json({
-                    status: true,
-                    message: 'Unliked successfully',
-                    data: updatedPost
-                })
-            }
-            else {
-                // like
-                const updatedPost = await Service.updatePost({
-                    query: { _id: postId },
-                    updateDoc: { $push: { likes: userId } },
-                    opts: { new: true }
-                })
+      const postDetails = (await Service.getPostById(
+        postId as string
+      )) as postModelTypes;
+      console.log("🚀 ~ postDetails:", postDetails);
 
-                return res.json({
-                    status: true,
-                    message: 'Liked successfully',
-                    data: updatedPost
-                })
-            }
+      if (!postDetails) {
+        return next(new ApiError(httpStatus.BAD_REQUEST, "Post not found."));
+      }
 
-        }
-        catch (err) {
-            log.debug("Error while editing post");
-            log.error(err);
-            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
-        }
-    },
-    commentPostController: async (req: Request, res: Response, next: NextFunction) => {
-        try {
-            const { postId, userId, text } = req.body;
+      // Find comment
+      const comment = postDetails.comments.find(
+        (comment: any) => comment._id + "" === commentId + ""
+      );
+      console.log("🚀 ~ comment:", comment);
 
-            const postDetails = await Service.getPostById(postId) as postModelTypes
+      if (!comment) {
+        return next(new ApiError(httpStatus.BAD_REQUEST, "Comment not found."));
+      }
 
-            if (!postDetails) {
-                return next(new ApiError(httpStatus.BAD_REQUEST, 'Post not found.'));
-            }
+      if (comment.userId + "" !== userId + "") {
+        return next(
+          new ApiError(
+            httpStatus.UNAUTHORIZED,
+            "You are not authorized to delete this comment"
+          )
+        );
+      }
 
-            const newComment = {
-                userId,
-                text
-            }
+      // delete comment (update the comment as isDeleted true)
+      const updatedPost = await Service.updatePostByQuery({
+        query: { _id: postId, "comments._id": commentId },
+        updateQuery: {
+          $set: {
+            "comments.$.isDeleted": true,
+          },
+        },
+        opts: { new: true },
+      });
+      console.log("🚀 ~ updatedPost:", updatedPost);
 
-            const updatedPost = await Service.updatePost({
-                query: { _id: postId },
-                updateDoc: {
-                    $push: { comments: newComment }
-                },
-                opts: { new: true }
-            })
+      return res.json({
+        status: true,
+        message: "Comment added successfully",
+        data: updatedPost,
+      });
+    } catch (err) {
+      log.debug("Error while editing post");
+      log.error(err);
+      return next(
+        new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error")
+      );
+    }
+  },
 
+  likeUnlikeCommentController: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { postId, commentId } = req.body;
+      const userId = req.userId;
+      console.log("🚀 ~ userId:", userId);
 
-            return res.json({
-                status: true,
-                message: 'Comment added successfully',
-                data: updatedPost
-            })
-        }
-        catch (err) {
-            log.debug("Error while editing post");
-            log.error(err);
-            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
-        }
-    },
-    getFeedPostsController: async (req: Request, res: Response, next: NextFunction) => {
-        try {
+      const postDetails = (await Service.getPost({
+        query: {
+          _id: postId,
+          isDeleted: false,
+          "comments._id": commentId,
+          "comments.userId": userId,
+          "comments.isDeleted": false,
+        },
+        opts: {},
+      })) as postModelTypes;
+      console.log("🚀 ~ postDetails:", postDetails);
 
-            const followingList = req.user?.following || []
+      if (!postDetails) {
+        return next(new ApiError(httpStatus.BAD_REQUEST, "Post not found."));
+      }
 
-            const feedPosts = await Service.getAllPosts({ query: { postedBy: { $in: followingList }, isDeleted: false } }) as postModelTypes[]
+      // find comment
 
-            return res.json({
-                status: true,
-                message: 'Feed posts fetched successfully',
-                data: {
-                    feedPosts
-                }
-            })
-        }
-        catch (err) {
-            log.debug("Error while fetching feed posts");
-            log.error(err);
-            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
-        }
-    },
-}
+      const comment = postDetails.comments.find(
+        (comment: any) => comment._id + "" === commentId + ""
+      );
+
+      if (!comment) {
+        return next(new ApiError(httpStatus.BAD_REQUEST, "Comment not found."));
+      }
+
+      const isLiked = comment.likes.some(
+        (like: any) => like + "" === userId + ""
+      );
+
+      if (isLiked) {
+        // unlike
+        comment.likes = comment.likes.filter(
+          (like: any) => like + "" !== userId + ""
+        );
+        const updatedPost = await Service.updatePostByQuery({
+          query: { _id: postId, "comments._id": commentId },
+          updateQuery: {
+            $set: {
+              "comments.$.likes": comment.likes,
+            },
+          },
+          opts: { new: true },
+        });
+
+        return res.json({
+          status: true,
+          message: "Unliked successfully",
+          data: updatedPost,
+        });
+      } else {
+        // like
+        console.log("🚀 ~ likeUnlikePostController: ~ userId:", userId);
+        comment.likes.push(userId as string);
+        const updatedPost = await Service.updatePostByQuery({
+          query: { _id: postId, "comments._id": commentId },
+          updateQuery: {
+            $set: {
+              "comments.$.likes": comment.likes,
+            },
+          },
+          opts: { new: true },
+        });
+        console.log(
+          "🚀 ~ likeUnlikePostController: ~ updatedPost:",
+          updatedPost
+        );
+
+        return res.json({
+          status: true,
+          message: "Liked successfully",
+          data: updatedPost,
+        });
+      }
+    } catch (err) {
+      log.debug("Error while editing post");
+      log.error(err);
+      return next(
+        new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error")
+      );
+    }
+  },
+};

@@ -14,7 +14,7 @@ export class Database {
                 useNewUrlParser: true,
                 useUnifiedTopology: true
             }
-            const name = 'csv-viewer'
+            const name = 'upside-server'
             const replSet = ''
         
             let db: any;

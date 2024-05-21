@@ -6,13 +6,13 @@ import { DBService } from '../../utils/dbService/dbService';
 const DB = new DBService();
 
 export default {
-    getUser: async ({query}: any) => {
+    getUser: async ({query}: {query: any}) => {
         return await DB.getOneByQuery(constants.COLLECTIONS.USER_COLLECTION, query, {});
     },
     getUserById: async (id: string) => {
         return await DB.getById(constants.COLLECTIONS.USER_COLLECTION, id, {});
     },
-    updateUser: async ({query, updateDoc}: any) => {
+    updateUser: async ({query, updateDoc}: {query: any, updateDoc: any}) => {
         return await DB.updateOne(constants.COLLECTIONS.USER_COLLECTION, query, {$set: updateDoc}, null);
     }
 }
