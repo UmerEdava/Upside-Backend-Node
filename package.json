@@ -27,7 +27,8 @@
     "joi-objectid": "^4.0.2",
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^7.2.0",
-    "pino": "^8.14.1"
+    "pino": "^8.14.1",
+    "socket.io": "^4.7.5"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.2",

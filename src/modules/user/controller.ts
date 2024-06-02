@@ -157,5 +157,34 @@ export default {
             log.error(err);
             return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
         }
+    },
+
+    getUsersByUsernameController: async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { username } = req.params;
+
+            const query = []
+
+            query.push({ username, isDeleted: false })
+
+            const user = await UserService.getUsersByQuery({query: {
+                $or: query
+            }})
+
+            if (!user) {
+                return next(new ApiError(httpStatus.NOT_FOUND, 'User not found.'));
+            };
+
+            return res.json({
+                status: true,
+                message: 'Users fetched successfully.',
+                data: user
+            })
+        }
+        catch (err) {
+            log.debug("Error while login");
+            log.error(err);
+            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
+        }
     }
 }

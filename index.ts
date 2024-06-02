@@ -1,10 +1,10 @@
 
 import dotenv from 'dotenv';
 dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
-import app from "./src/app";
 import config from "./src/config/config";
 import { Database } from './src/config/db';
 import { log } from './src/config/logger';
+import { server } from './src/socket/socket';
 
 const DB = new Database();
 
@@ -47,7 +47,7 @@ const startServer = async () => {
         process.exit(1)
     }
 
-    app.listen(config.PORT, () => {
+    server.listen(config.PORT, () => {
         log.info(`Upside server is started on port: ${config.PORT}`)
         console.log(`Upside server is started on port: ${config.PORT}`)
     })

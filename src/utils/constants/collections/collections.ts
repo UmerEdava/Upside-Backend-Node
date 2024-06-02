@@ -1,5 +1,7 @@
 export default Object.freeze({
     USER_COLLECTION: 'users',
     POST_COLLECTION: 'post',
-    TEST_COLLECTION: 'test'
+    CHAT_COLLECTION: 'chat',
+    MESSAGE_COLLECTION: 'message',
+    TEST_COLLECTION: 'test',
 });

@@ -8,14 +8,13 @@ import { log } from "./config/logger";
 import router from "./routes/Router";
 import cookieParser from 'cookie-parser';
 import {v2 as cloudinary} from 'cloudinary';
+import { app } from "./socket/socket";
           
 cloudinary.config({ 
   cloud_name: 'dupzhhmj1', 
   api_key: '542264373916361', 
   api_secret: 'qzZdV3UmunC8d8mOG9USVE9HIgI' 
 });
-
-const app = express();
 
 app.disable("x-powered-by"); // For security
 app.use(cors({ origin: true, credentials: true }));

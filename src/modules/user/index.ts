@@ -8,6 +8,7 @@ userRouter.use(authMiddleware);
 userRouter.get('/follow/:id', validator.followUser, controller.followUnfollowController);
 userRouter.get('/:id', validator.getUserById, controller.getUserByIdOrUsernameController);
 userRouter.put('/', validator.updateUser, controller.updateUserController);
+userRouter.get('/search/:username', validator.getUsersByUsername, controller.getUsersByUsernameController);
 
 
 

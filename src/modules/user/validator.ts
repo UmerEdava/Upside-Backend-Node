@@ -21,5 +21,10 @@ export default {
             profilePic: Joi.string().allow(''),
             bio: Joi.string(),
         })
-    })
+    }),
+    getUsersByUsername: celebrate({
+        params: {
+            username: Joi.string().required(),
+        }
+    }),
 }

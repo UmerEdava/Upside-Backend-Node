@@ -14,5 +14,10 @@ export default {
     },
     updateUser: async ({query, updateDoc}: {query: any, updateDoc: any}) => {
         return await DB.updateOne(constants.COLLECTIONS.USER_COLLECTION, query, {$set: updateDoc}, null);
-    }
+    },
+    getUsersByQuery: async ({query}: {query: any}) => {
+        return await DB.getByQuery(constants.COLLECTIONS.USER_COLLECTION, query, {
+            projections: { __v: 0, password: 0, createdAt: 0, updatedAt: 0 }
+        })
+    },
 }
