@@ -22,12 +22,9 @@ declare global {
 // Auth middleware
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log("🚀 ~ authMiddleware ~ req?.cookies:", req?.cookies)
         let cookie = req?.cookies['user-cookie'];
-        console.log("🚀 ~ authMiddleware ~ cookie:", cookie)
 
         let jwtData = await JWT.verifyJwtToken(cookie) as JwtPayload;
-        console.log("🚀 ~ authMiddleware ~ jwtData:", jwtData)
         if (cookie && jwtData) {
 
             // verify user id
@@ -46,7 +43,6 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         }
     }
     catch (error: any) {
-        console.log("🚀 ~ authMiddleware ~ error:", error)
         if (error.message == "jwt expired") {
             return next(new ApiError(401, "Not Authorized"));
         } else {

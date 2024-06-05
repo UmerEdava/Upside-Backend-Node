@@ -9,6 +9,7 @@ import * as types from "../../utils/types/types";
 import Service from "./service";
 import UserService from '../user/service'
 import { send } from "process";
+import { getRecipientSocketId, io } from "../../socket/socket";
 
 export default {
   sendMessageController: async (
@@ -59,6 +60,12 @@ export default {
           }
         })
       ])
+
+      const recipientSocketId = getRecipientSocketId(recipientId)
+
+      if (recipientSocketId) {
+        io.to(recipientSocketId).emit("newMessage", newMessage)
+      }
 
       return res.json({
         status: true,
@@ -121,18 +128,31 @@ export default {
       const userId = req.user?._id
 
       // Fetch all chats of current user
-      let chats = await ChatModel.find({
+      let chats = []
+      let chatsResult = await ChatModel.find({
         participants: userId,
         isDeleted: false
       }).populate({
         path: "participants",
         select: ["_id", "name", "username", "profilePic", "mobile_number"]
       }).sort({updatedAt: -1}).lean()
-      console.log("🚀 ~ chats:", chats)
+
+      chats = chatsResult as any
+
+      // Find all unseen messages
+      const unseenMessages = await MessageModel.find({
+        chatId: { $in: chats.map((chat: any) => chat._id) },
+        sender: { $ne: userId },
+        seen: false
+      })
 
       // Remove current user from participants
-      chats.forEach((chat) => {
-        chat.participants = chat.participants.filter((participant: any) => participant?._id+'' != userId+'')        
+      chats.forEach((chat: any) => {
+        chat.participants = chat.participants.filter((participant: any) => participant?._id+'' != userId+'')   
+        
+        // find unseen messages for each chat
+        chat.unSeenCount = unseenMessages.filter((unseenMessage: any) => unseenMessage.chatId+'' == chat._id+'').length
+
       })
 
       return res.json({

@@ -386,6 +386,7 @@ export default {
     res: Response,
     next: NextFunction
   ) => {
+    console.log('inside feed')
     try {
       const followingList = req.user?.following || [];
 
