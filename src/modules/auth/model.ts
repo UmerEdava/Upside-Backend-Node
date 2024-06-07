@@ -2,6 +2,40 @@ import { Bcrypt } from "../../utils/bcrypt/Bcrypt";
 import mongoose from "mongoose";
 import * as constants from '../../utils/constants/index';
 
+interface IUser {
+    _id: string,
+    name: string,
+    username: string,
+    email: string,
+    password?: string,
+    country_code: string,
+    mobile_number: string,
+    profilePic: string,
+    followers: string[],
+    following: string[],
+    bio: string,
+    isDeactivated: boolean
+  }
+  
+  interface UserModel extends mongoose.Model<UserDoc> {
+    build(attrs: IUser): UserDoc;
+  }
+  
+  interface UserDoc extends mongoose.Document {
+    _id: string,
+    name: string,
+    username: string,
+    email: string,
+    password?: string,
+    country_code: string,
+    mobile_number: string,
+    profilePic: string,
+    followers: string[],
+    following: string[],
+    bio: string,
+    isDeactivated: boolean
+  }
+
 export interface userModelTypes {
     _id: string,
     name: string,
@@ -13,7 +47,8 @@ export interface userModelTypes {
     profilePic: string,
     followers: string[],
     following: string[],
-    bio: string
+    bio: string,
+    isDeactivated: boolean
 }
 
 const userSchema = new mongoose.Schema({
@@ -27,6 +62,7 @@ const userSchema = new mongoose.Schema({
     followers: { type: [mongoose.Schema.Types.ObjectId], ref: constants.COLLECTIONS.USER_COLLECTION, default: [] },
     following: { type: [mongoose.Schema.Types.ObjectId], ref: constants.COLLECTIONS.USER_COLLECTION, default: [] },
     bio: { type: String, default: '' },
+    isDeactivated: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false }
 }, {
     autoIndex: false,
@@ -47,6 +83,10 @@ userSchema.pre('save', async function (next) {
     }
 })
 
-const userModel = mongoose.model(constants.COLLECTIONS.USER_COLLECTION, userSchema);
+userSchema.statics.build = (attrs: IUser) => {
+    return new userModel(attrs);
+};
+  
+const userModel = mongoose.model<UserDoc, UserModel>(constants.COLLECTIONS.USER_COLLECTION, userSchema);
 
 export default userModel;

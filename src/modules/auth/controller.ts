@@ -9,6 +9,7 @@ import { userModelTypes } from "./model";
 
 import * as types from "../../utils/types/types";
 import Service from './service';
+import UserService from '../user/service'
 
 export default {
     loginController: async (req: Request, res: Response, next: NextFunction) => {
@@ -29,6 +30,14 @@ export default {
             }
             catch (err) {
                 return next(new ApiError(httpStatus.UNAUTHORIZED, 'Incorrect password'));
+            }
+
+            // Activate account
+            if (userExist.isDeactivated) {   
+                await UserService.updateUser({
+                    query: { _id: userExist?._id },
+                    updateDoc: { isDeactivated: false }
+                })
             }
 
             const token = await JWT.generateJwtToken(

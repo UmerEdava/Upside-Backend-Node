@@ -6,7 +6,8 @@ export default {
     sendMessage: celebrate({
         body: Joi.object({
             recipientId: Joi.objectId().required(),
-            message: Joi.string().max(1000),
+            message: Joi.string().max(1000).allow(''),
+            img: Joi.string().allow('')
         })
     }),
     updatePost: celebrate({

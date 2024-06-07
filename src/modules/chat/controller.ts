@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import httpStatus from "http-status";
+import { v2 as cloudinary } from "cloudinary";
 
 import { ApiError } from "../../middlewares/errorHandler/ApiError";
 import { log } from "../../config/logger";
@@ -19,6 +20,8 @@ export default {
   ) => {
     try {
       const { recipientId, message } = req.body;
+      let { img } = req.body;
+
       const senderId = req.user?._id
 
       if (senderId == recipientId) {
@@ -45,10 +48,17 @@ export default {
         await chat.save()
       }
 
+      // Upload Image
+      if (img) {
+          const uploadedResponse = await cloudinary.uploader.upload(img);
+          img = uploadedResponse.secure_url;
+      }
+
       const newMessage = new MessageModel({
         chatId: chat._id,
         sender: senderId,
-        text: message
+        text: message,
+        img: img || ''
       })
 
       await Promise.all([

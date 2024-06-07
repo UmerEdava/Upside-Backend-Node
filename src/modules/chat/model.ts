@@ -18,7 +18,8 @@ export interface messageModelTypes extends Document {
     chatId: string,
     sender: string,
     seen: string,
-    text?: string
+    text?: string,
+    img?: string
 }
 
 const chatSchema : Schema = new mongoose.Schema({
@@ -40,6 +41,7 @@ const messageSchema : Schema = new mongoose.Schema({
     chatId: { type: mongoose.Schema.Types.ObjectId, ref: constants.COLLECTIONS.CHAT_COLLECTION, required: true },
     sender: { type: mongoose.Schema.Types.ObjectId, ref: constants.COLLECTIONS.USER_COLLECTION, required: true },
     text: { type: String, maxLength: 1000 },
+    img: { type: String },
     seen: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false }
 }, {

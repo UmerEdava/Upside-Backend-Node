@@ -186,5 +186,63 @@ export default {
             log.error(err);
             return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
         }
-    }
+    },
+
+    getSuggestedUsersController: async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const userId = req.user?._id;
+
+            const usersFollowedByYou = await UserService.getUserById(userId as string) as userModelTypes
+            console.log("🚀 ~ getSuggestedUsersController: ~ usersFollowedByYou:", usersFollowedByYou)
+
+            // randomly fetch 10 users from db
+            let aggregateQuery = [
+                {
+                    $match: {
+                        _id: { $nin: usersFollowedByYou.following }
+                    },
+                },
+                {
+                    $sample: { size: 10 }
+                }
+            ]
+
+            let suggestedUsers = await UserService.getUsersByAggregate({
+                query: aggregateQuery
+            })
+
+            return res.json({
+                status: true,
+                message: 'Suggested users fetched successfully.',
+                data: suggestedUsers
+            })
+        }
+        catch (err) {
+            log.debug("Error while login");
+            log.error(err);
+            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
+        }
+    },
+
+    deactivateUserController: async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const userId = req.user?._id;
+
+            await UserService.updateUser({
+                query: { _id: userId },
+                updateDoc: { isDeactivated: true }
+            })
+
+            return res.json({
+                status: true,
+                message: 'User deactivated successfully.',
+                data: {}
+            })
+        }
+        catch (err) {
+            log.debug("Error while login");
+            log.error(err);
+            return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error'));
+        }
+    },
 }
