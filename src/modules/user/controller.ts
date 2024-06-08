@@ -168,6 +168,7 @@ export default {
             query.push({ username: { $regex: username, $options: 'i' }, isDeleted: false })
 
             const user = await UserService.getUsersByQuery({query: {
+                _id: { $ne: req.user?._id },
                 $or: query
             }})
 
