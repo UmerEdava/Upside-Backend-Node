@@ -19,7 +19,7 @@ export default {
     },
     getUsersByQuery: async ({query, opts}: {query: Filter<userModelTypes>, opts?: any}) => {
         return await DB.getByQuery(constants.COLLECTIONS.USER_COLLECTION, query, {
-            ...(opts.projections ? { ...opts.projections, __v: 0, password: 0, createdAt: 0, updatedAt: 0 } : { __v: 0, password: 0, createdAt: 0, updatedAt: 0 }),
+            ...(opts?.projections ? {projections:{ ...opts?.projections, __v: 0, password: 0, createdAt: 0, updatedAt: 0 }} : {projections:{ __v: 0, password: 0, createdAt: 0, updatedAt: 0 }}),
         })
     },
     getUsersByAggregate: async ({query}: {query: any}) => {
