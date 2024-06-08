@@ -14,6 +14,7 @@ import { errorHandler } from "./src/middlewares/errorHandler/error-handler";
 import router from "./src/routes/Router";
 import cookieParser from "cookie-parser";
 import { v2 as cloudinary } from "cloudinary";
+import job from "./src/cron/cron";
 
 cloudinary.config({
   cloud_name: "dupzhhmj1",
@@ -24,6 +25,8 @@ cloudinary.config({
 const DB = new Database();
 
 // Checking the env variables (if you have local mongodb setup, then comment MONGO_URI validation)
+console.log('node-env: ', process.env.NODE_ENV);
+console.log('jwt-key: ', process.env.JWT_KEY);
 if (!process.env.JWT_KEY) {
   throw new Error("JWT_KEY must be defined");
 }
@@ -55,6 +58,7 @@ process.on("SIGINT", () => {
 const startServer = async () => {
   try {
     await DB.connect();
+    job.start();
 
     app.disable("x-powered-by"); // For security
     app.use(cors({ origin: true, credentials: true }));
