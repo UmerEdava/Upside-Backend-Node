@@ -48,9 +48,10 @@ export default {
             );
             res.cookie('user-cookie', token, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === "development" ? false : true,
+                // secure: process.env.NODE_ENV === "development" ? false : true,
+                secure: true,
                 maxAge: 10 * 24 * 60 * 60 * 1000 /* day * hour * 60 * 60 * 1000  */,
-                sameSite: "strict"
+                sameSite: "none"
             })
 
             delete userExist?.password;
