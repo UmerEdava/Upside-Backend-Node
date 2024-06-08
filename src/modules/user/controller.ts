@@ -165,7 +165,7 @@ export default {
 
             const query = []
 
-            query.push({ username, isDeleted: false })
+            query.push({ username: { $regex: username, $options: 'i' }, isDeleted: false })
 
             const user = await UserService.getUsersByQuery({query: {
                 $or: query
