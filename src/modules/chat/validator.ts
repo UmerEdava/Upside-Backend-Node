@@ -59,5 +59,11 @@ export default {
         params: {
             username: Joi.string().required()
         }
+    }),
+    getAgoraToken: celebrate({
+        query: {
+            uid: Joi.string().required(),
+            channelName: Joi.string().required()
+        }
     })
 }

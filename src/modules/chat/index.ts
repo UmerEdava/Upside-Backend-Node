@@ -10,6 +10,8 @@ chatRouter.get('/getAllChats', controller.getUserChatsController);
 chatRouter.get('/search/:username', validator.searchChats, controller.getChatsAndUsersByUsernameController);
 chatRouter.get('/:chatId/messages', controller.getChatMessagesController);
 
+chatRouter.get('/agora-token', validator.getAgoraToken, controller.getAgoraTokenController);
+
 // chatRouter.put('/', validator.updatePost, controller.updatePostController);
 // chatRouter.get('/user', controller.getCurrentUserPostsController);
 // chatRouter.get('/user/:idOrUsername', validator.getAllOtherUserPosts, controller.getAllPostsController);

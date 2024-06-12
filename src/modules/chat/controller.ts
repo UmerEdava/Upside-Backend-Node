@@ -255,6 +255,30 @@ export default {
       );
     }
   },
+
+  getAgoraTokenController: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { uid, channelName } = req.query
+      const token = await Service.getAgoraToken(uid as string, channelName as string)
+      return res.json({
+        status: true,
+        message: "Token fetched successfully",
+        data: {
+          token
+        },
+      });
+    } catch (err) {
+      log.debug("Error while fetching token");
+      log.error(err);
+      return next(
+        new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error")
+      );
+    }
+  }
   
   
   
