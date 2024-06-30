@@ -4,6 +4,7 @@ import * as types from '../../utils/types/types';
 import { DBService } from '../../utils/dbService/dbService';
 const DB = new DBService();
 
+
 export default {
     checkUserExist: async (query: any) => {
         return await DB.getOneByQuery(constants.COLLECTIONS.USER_COLLECTION, query, {

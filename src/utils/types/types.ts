@@ -15,3 +15,8 @@ export interface CREATE_POST {
     text: string
     img: string
 }
+
+export interface MESSAGE_STATUS_TYPES {
+    PENDING: 'string'
+    SENT: 'sent'
+}

@@ -4,7 +4,7 @@ import { v2 as cloudinary } from "cloudinary";
 
 import { ApiError } from "../../middlewares/errorHandler/ApiError";
 import { log } from "../../config/logger";
-import { ChatModel, chatModelTypes, MessageModel, messageModelTypes } from "./model";
+import { ChatModel, chatModelTypes, MESSAGE_STATUS_TYPES, MessageModel, messageModelTypes } from "./model";
 
 import * as types from "../../utils/types/types";
 import Service from "./service";
@@ -58,7 +58,8 @@ export default {
         chatId: chat._id,
         sender: senderId,
         text: message,
-        img: img || ''
+        img: img || '',
+        status: MESSAGE_STATUS_TYPES.SENT
       })
 
       await Promise.all([

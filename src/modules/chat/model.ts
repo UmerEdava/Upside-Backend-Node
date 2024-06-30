@@ -1,6 +1,12 @@
 import mongoose, { Document, Schema } from "mongoose";
 import * as constants from '../../utils/constants/index';
 import { userModelTypes } from "../auth/model";
+import * as types from "../../utils/types/types";
+
+export enum MESSAGE_STATUS_TYPES {
+    PENDING = "pending",
+    SENT ="sent",
+}
 
 interface lastMessageType {
     text: string,
@@ -42,6 +48,7 @@ const messageSchema : Schema = new mongoose.Schema({
     sender: { type: mongoose.Schema.Types.ObjectId, ref: constants.COLLECTIONS.USER_COLLECTION, required: true },
     text: { type: String, maxLength: 1000 },
     img: { type: String },
+    status: { type: String, enum: [MESSAGE_STATUS_TYPES.PENDING, MESSAGE_STATUS_TYPES.SENT], default: MESSAGE_STATUS_TYPES.PENDING },
     seen: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false }
 }, {
