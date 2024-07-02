@@ -2,7 +2,7 @@ import { Server } from "socket.io";
 import http from "http";
 import express from "express";
 import { ChatModel, MessageModel } from "../modules/chat/model";
-import { sendFCMNotification } from "../services/notifications/FCM/push-notifications";
+// import { sendFCMNotification } from "../services/notifications/FCM/push-notifications";
 import userModel from "../modules/auth/model";
 
 const app = express();

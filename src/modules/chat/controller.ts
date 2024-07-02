@@ -11,7 +11,7 @@ import Service from "./service";
 import UserService from '../user/service'
 import { send } from "process";
 import { getRecipientSocketId, io } from "../../socket/socket";
-import { sendFCMNotification } from "../../services/notifications/FCM/push-notifications";
+// import { sendFCMNotification } from "../../services/notifications/FCM/push-notifications";
 
 export default {
   sendMessageController: async (
@@ -296,7 +296,7 @@ export default {
         return next(new ApiError(httpStatus.BAD_REQUEST, "Token not found"));
       }
       
-      await sendFCMNotification({token: token as string, data: {title: "Test Title", body: "Test Body"}})
+      // await sendFCMNotification({token: token as string, data: {title: "Test Title", body: "Test Body"}})
 
 
       return res.json({
