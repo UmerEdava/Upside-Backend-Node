@@ -11,6 +11,7 @@ import Service from "./service";
 import UserService from '../user/service'
 import { send } from "process";
 import { getRecipientSocketId, io } from "../../socket/socket";
+import { sendFCMNotification } from "../../services/notifications/FCM/push-notifications";
 
 export default {
   sendMessageController: async (
@@ -270,6 +271,39 @@ export default {
         message: "Token fetched successfully",
         data: {
           token
+        },
+      });
+    } catch (err) {
+      log.debug("Error while fetching token");
+      log.error(err);
+      return next(
+        new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error")
+      );
+    }
+  },
+  
+
+
+  sendFcmController: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { token } = req.query
+
+      if (!token) {
+        return next(new ApiError(httpStatus.BAD_REQUEST, "Token not found"));
+      }
+      
+      await sendFCMNotification({token: token as string, data: {title: "Test Title", body: "Test Body"}})
+
+
+      return res.json({
+        status: true,
+        message: "FCM sent successfully",
+        data: {
+          
         },
       });
     } catch (err) {

@@ -2,6 +2,19 @@ import { Bcrypt } from "../../utils/bcrypt/Bcrypt";
 import mongoose from "mongoose";
 import * as constants from '../../utils/constants/index';
 
+export enum DeviceTypeEnum {
+	IOS = 'IOS',
+	ANDROID = 'ANDROID',
+	WEB = 'WEB',
+}
+
+export interface IUserFcmToken {
+	deviceId?: string;
+	token: string;
+	device: DeviceTypeEnum;
+	addedOn: Date;
+}
+
 interface IUser {
     _id: string,
     name: string,
@@ -14,7 +27,8 @@ interface IUser {
     followers: string[],
     following: string[],
     bio: string,
-    isDeactivated: boolean
+    isDeactivated: boolean,
+    fcmTokens: IUserFcmToken[]
   }
   
   interface UserModel extends mongoose.Model<UserDoc> {
@@ -33,7 +47,8 @@ interface IUser {
     followers: string[],
     following: string[],
     bio: string,
-    isDeactivated: boolean
+    isDeactivated: boolean,
+    fcmTokens: IUserFcmToken[]
   }
 
 export interface userModelTypes {
@@ -48,7 +63,8 @@ export interface userModelTypes {
     followers: string[],
     following: string[],
     bio: string,
-    isDeactivated: boolean
+    isDeactivated: boolean,
+    fcmTokens: IUserFcmToken[]
 }
 
 const userSchema = new mongoose.Schema({
@@ -63,7 +79,16 @@ const userSchema = new mongoose.Schema({
     following: { type: [mongoose.Schema.Types.ObjectId], ref: constants.COLLECTIONS.USER_COLLECTION, default: [] },
     bio: { type: String, default: '' },
     isDeactivated: { type: Boolean, default: false },
-    isDeleted: { type: Boolean, default: false }
+    isDeleted: { type: Boolean, default: false },
+    fcmTokens: [{
+        deviceId: String,
+        token: String,
+        device: {
+            type: String,
+            enum: [DeviceTypeEnum.IOS, DeviceTypeEnum.ANDROID, DeviceTypeEnum.WEB],
+        },
+        addedOn: Date
+    }]
 }, {
     autoIndex: false,
     timestamps: true 

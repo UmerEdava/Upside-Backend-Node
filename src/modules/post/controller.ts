@@ -386,7 +386,6 @@ export default {
     res: Response,
     next: NextFunction
   ) => {
-    console.log('inside feed')
     try {
       const followingList = req.user?.following || [];
 
@@ -397,6 +396,7 @@ export default {
             path: "postedBy",
             select: ["_id", "name", "username", "profilePic"],
           },
+          sortOption: { createdAt: -1 },
         },
       })) as postModelTypes[];
 

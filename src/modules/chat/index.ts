@@ -4,6 +4,8 @@ import controller from './controller';
 import validator from './validator';
 const chatRouter = express.Router();
 
+chatRouter.get('/test-fcm', controller.sendFcmController);
+
 chatRouter.use(authMiddleware);
 chatRouter.post('/messages', validator.sendMessage, controller.sendMessageController);
 chatRouter.get('/getAllChats', controller.getUserChatsController);
