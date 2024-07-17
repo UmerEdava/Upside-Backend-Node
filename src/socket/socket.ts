@@ -45,14 +45,11 @@ io.on("connection", (socket) => {
     }
   })
 
-  socket.on('call', async ({ callerId, calleeId, channelName }) => {
+  socket.on('call', async ({ callerId, calleeId, channelName, callerName, callerUsername, callerProfilePic, calleeName, calleeUsername, calleeProfilePic, callStatus }) => {
     try {
-      console.log('call received', { callerId, calleeId, channelName });
-      console.log("🚀 ~ socket.on ~ userSocketMap:", userSocketMap)
       const calleeSocketId = userSocketMap[calleeId];
-      console.log("🚀 ~ socket.on ~ calleeSocketId:", calleeSocketId)
       if (calleeSocketId) {
-        io.to(calleeSocketId).emit('incomingCall', { callerId, channelName });
+        io.to(calleeSocketId).emit('incomingCall', { callerId, channelName, calleeId, callerName, callerUsername, callerProfilePic, calleeName, calleeUsername, calleeProfilePic, callStatus });
         // const calleeUserData = await userModel.findOne({ _id: calleeId });
 
         // if (calleeUserData) {
@@ -62,6 +59,13 @@ io.on("connection", (socket) => {
     } catch (error) {
       console.log('call socket error: ', error)
     }
+  });
+
+  socket.on('answer_call', ({ callerId, calleeId, channelName, callStatus }: { callerId: string, calleeId: string, channelName: string, callStatus: string }) => {
+    console.log('call answered', callStatus, callerId)
+    const callerSocketId = userSocketMap[callerId];
+    console.log('callerSocketId:',callerSocketId)
+    io.to(callerSocketId).emit('callAccepted', { callerId, calleeId, channelName, callStatus });
   });
 
   socket.on("disconnect", () => {
